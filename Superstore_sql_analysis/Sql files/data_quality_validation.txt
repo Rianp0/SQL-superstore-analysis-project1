@@ -1,0 +1,60 @@
+
+'sales_raw' AS table_name, COUNT(*) AS row_count FROM superstore.sales_raw
+UNION ALL
+SELECT 'order_lines', COUNT(*) FROM superstore.order_lines;
+
+
+SELECT
+    COUNT(*) FILTER (WHERE order_date IS NULL) AS missing_order_dates,
+    COUNT(*) FILTER (WHERE region IS NULL OR BTRIM(region) = '') AS missing_regions,
+    COUNT(*) FILTER (WHERE state IS NULL OR BTRIM(state) = '') AS missing_states,
+    COUNT(*) FILTER (WHERE category IS NULL OR BTRIM(category) = '') AS missing_categories,
+    COUNT(*) FILTER (WHERE sub_category IS NULL OR BTRIM(sub_category) = '') AS missing_subcategories,
+    COUNT(*) FILTER (WHERE segment IS NULL OR BTRIM(segment) = '') AS missing_segments,
+    COUNT(*) FILTER (WHERE sales IS NULL) AS missing_sales,
+    COUNT(*) FILTER (WHERE profit IS NULL) AS missing_profit,
+    COUNT(*) FILTER (WHERE quantity IS NULL) AS missing_quantity
+FROM superstore.order_lines;
+
+SELECT
+    COUNT(*) FILTER (WHERE sales < 0) AS negative_sales,
+    COUNT(*) FILTER (WHERE quantity <= 0) AS nonpositive_quantities
+FROM superstore.order_lines;
+
+SELECT sale_id, COUNT(*) AS occurrences
+FROM superstore.order_lines
+GROUP BY sale_id
+HAVING COUNT(*) > 1;
+
+SELECT
+    order_date, region, state, category, sub_category, segment,
+    sales, profit, quantity, COUNT(*) AS occurrences
+FROM superstore.order_lines
+GROUP BY order_date, region, state, category, sub_category, segment,
+         sales, profit, quantity
+HAVING COUNT(*) > 1
+ORDER BY occurrences DESC
+LIMIT 20;
+
+SELECT COUNT(*) AS unmatched_region_rows
+FROM superstore.order_lines AS s
+LEFT JOIN superstore.regions AS r ON s.region = r.region_name
+WHERE r.region_name IS NULL;
+
+SELECT
+    MIN(order_date) AS first_date,
+    MAX(order_date) AS last_date,
+    COUNT(DISTINCT region) AS unique_regions
+FROM superstore.order_lines;
+
+SELECT 'raw' AS source,
+       ROUND(SUM(sales)::numeric, 2) AS total_sales,
+       ROUND(SUM(profit)::numeric, 2) AS total_profit,
+       SUM(quantity)::bigint AS total_units
+FROM superstore.sales_raw
+UNION ALL
+SELECT 'cleaned',
+       ROUND(SUM(sales)::numeric, 2),
+       ROUND(SUM(profit)::numeric, 2),
+       SUM(quantity)::bigint
+FROM superstore.order_lines;

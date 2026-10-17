@@ -1,0 +1,71 @@
+-- SUPERSTORE RETAIL SALES ANALYSIS
+-- 01_database_setup.sql
+-- Run in pgAdmin Query Tool connected to your chosen database.
+-- Source CSV column order:
+-- Order Date,Region,State,Category,Sub-Category,Segment,Sales,Profit,Quantity
+-- This script is intended for a fresh setup. It does not drop existing data.
+
+CREATE SCHEMA IF NOT EXISTS superstore;
+
+CREATE TABLE IF NOT EXISTS superstore.sales_raw (
+    order_date TEXT,
+    region TEXT,
+    state TEXT,
+    category TEXT,
+    sub_category TEXT,
+    segment TEXT,
+    sales NUMERIC(12,2),
+    profit NUMERIC(12,4),
+    quantity INTEGER
+);
+
+-- IMPORT STEP (pgAdmin graphical interface, not SQL):
+-- Right-click superstore.sales_raw > Import/Export Data > Import.
+-- Choose the nine-column CSV, CSV format, Header = Yes,
+-- delimiter = comma, quote = double quote, encoding = UTF8.
+-- Check the Columns tab: exactly the nine columns above, in that order.
+-- Do not rerun the import on a populated table or you will duplicate rows.
+
+
+SELECT COUNT(*) AS imported_rows FROM superstore.sales_raw;
+
+
+CREATE TABLE IF NOT EXISTS superstore.order_lines (
+    sale_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_date DATE,
+    region TEXT,
+    state TEXT,
+    category TEXT,
+    sub_category TEXT,
+    segment TEXT,
+    sales NUMERIC(12,2),
+    profit NUMERIC(12,4),
+    quantity INTEGER
+);
+
+INSERT INTO superstore.order_lines
+    (order_date, region, state, category, sub_category, segment, sales, profit, quantity)
+SELECT
+    TO_DATE(order_date, 'MM/DD/YYYY'),
+    region, state, category, sub_category, segment, sales, profit, quantity
+FROM superstore.sales_raw
+WHERE NOT EXISTS (SELECT 1 FROM superstore.order_lines);
+
+CREATE INDEX IF NOT EXISTS idx_order_lines_date
+    ON superstore.order_lines(order_date);
+
+CREATE TABLE IF NOT EXISTS superstore.regions (
+    region_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    region_name TEXT UNIQUE NOT NULL
+);
+
+INSERT INTO superstore.regions (region_name)
+SELECT DISTINCT region
+FROM superstore.order_lines
+WHERE region IS NOT NULL
+ON CONFLICT (region_name) DO NOTHING;
+
+SELECT
+    (SELECT COUNT(*) FROM superstore.sales_raw) AS raw_rows,
+    (SELECT COUNT(*) FROM superstore.order_lines) AS cleaned_rows,
+    (SELECT COUNT(*) FROM superstore.regions) AS distinct_regions;

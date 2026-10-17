@@ -1,0 +1,95 @@
+-- Query 1: Total revenue, profit and units sold
+
+SELECT
+    COUNT(*) AS sales_lines,
+    ROUND(SUM(sales), 2) AS total_revenue,
+    ROUND(SUM(profit), 2) AS total_profit,
+    SUM(quantity) AS total_units_sold
+FROM superstore.order_lines;
+
+-- Query 2: Top 5 states by revenue
+
+SELECT
+    state,
+    ROUND(SUM(sales), 2) AS total_revenue,
+    ROUND(SUM(profit), 2) AS total_profit,
+    SUM(quantity) AS total_units_sold
+FROM superstore.order_lines
+GROUP BY state
+ORDER BY total_revenue DESC
+LIMIT 5;
+
+-- Query 3: Revenue by product category
+
+SELECT
+    category,
+    ROUND(SUM(sales), 2) AS total_revenue,
+    ROUND(SUM(profit), 2) AS total_profit,
+    SUM(quantity) AS units_sold,
+    ROUND(
+        100.0 * SUM(profit) / NULLIF(SUM(sales), 0),
+        2
+    ) AS profit_margin_pct
+FROM superstore.order_lines
+GROUP BY category
+ORDER BY total_revenue DESC;
+
+-- Query 4: Sales above 100,000
+
+SELECT
+    sub_category,
+    COUNT(*) AS sales_records,
+    ROUND(SUM(sales), 2) AS total_revenue,
+    ROUND(AVG(sales), 2) AS average_sale
+FROM superstore.order_lines
+WHERE sales > 0
+GROUP BY sub_category
+HAVING SUM(sales) > 100000
+ORDER BY total_revenue DESC;
+
+--Query 5: profitability categorising by customer segment
+
+SELECT
+    segment,
+    ROUND(SUM(sales), 2) AS total_revenue,
+    ROUND(SUM(profit), 2) AS total_profit,
+    ROUND(
+        100.0 * SUM(profit) / NULLIF(SUM(sales), 0),
+        2
+    ) AS profit_margin_pct,
+    CASE
+        WHEN SUM(profit) < 0 THEN 'Loss-making'
+        WHEN SUM(profit) / NULLIF(SUM(sales), 0) >= 0.15
+            THEN 'High profitability'
+        ELSE 'Moderate profitability'
+    END AS profitability_category
+FROM superstore.order_lines
+GROUP BY segment
+ORDER BY total_profit DESC;
+
+--Query 6: Monthly revenue and profit trends
+
+SELECT
+    DATE_TRUNC('month', order_date)::DATE AS month,
+    ROUND(SUM(sales), 2) AS monthly_revenue,
+    ROUND(SUM(profit), 2) AS monthly_profit,
+    SUM(quantity) AS units_sold
+FROM superstore.order_lines
+GROUP BY DATE_TRUNC('month', order_date)
+ORDER BY month;
+
+-- Query 7: Revenue by region by use of inner join function
+
+SELECT
+    r.region_name,
+    ROUND(SUM(s.sales), 2) AS total_revenue,
+    ROUND(SUM(s.profit), 2) AS total_profit,
+    SUM(s.quantity) AS units_sold
+FROM superstore.order_lines AS s
+INNER JOIN superstore.regions AS r
+    ON s.region = r.region_name
+GROUP BY r.region_name
+ORDER BY total_revenue DESC;
+
+
+
